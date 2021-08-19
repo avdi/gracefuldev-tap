@@ -184,9 +184,13 @@ So we can get rid of the explicit block return value.
 
 ```ruby
 def update_invoice_company(email, new_company)
-  Account.find_by_email(email).finalized_invoices.most_recent.tap do |invoice|
-    $logger.info "Updating #{invoice.number}"
-  end.update(company_name: new_company)
+  Account.find_by_email(email)
+         .finalized_invoices
+         .most_recent
+         .tap do |invoice|
+            $logger.info "Updating #{invoice.number}"
+          end
+         .update(company_name: new_company)
 end
 ```
 
@@ -197,5 +201,81 @@ effect on the chain of method calls.
 multiple chained message sends like this a *pipeline*. If we have an actual
 physical pipeline made of real pipes full of water or chemicals, and we want to
 take a sample from one stage of the pipeline, we insert a *tap* at that stage.
-Metaphorically, that's precisely what the `tap` method lets us do.
+Metaphorically, that's precisely what the `tap` method lets us do here.
 
+Compared to our original local variable version, using `tap` has the advantage
+that adding a single side effect to our pipeline is a single contiguous code
+addition.
+
+<!-- shot() --> 
+
+Removing that code is a single contiguous deletion.
+
+```ruby
+def update_invoice_company(email, new_company)
+  Account.find_by_email(email)
+         .finalized_invoices
+         .most_recent
+         .update(company_name: new_company)
+end
+```
+
+<!-- shot() --> 
+
+Semantically, this feels like a more one-to-one relationship of code to action.
+
+<!-- shot() --> 
+
+It also lends itself well to factoring. Let's say we decide to capture our
+logging code in a helper method which we can re-use from more than one call site.
+
+```ruby
+def log_invoice_update(invoice)
+  $logger.info "Updating #{invoice.number}"
+end
+```
+
+<!-- shot() -->
+
+Injecting this logging code into our pipeline now means using tap with the
+helper method, as an object, converted to a block using the `&` (to-proc) operator.
+
+```ruby
+def update_invoice_company(email, new_company)
+  Account.find_by_email(email)
+         .finalized_invoices
+         .most_recent
+         .tap(&method(:log_invoice_update))
+         .update(company_name: new_company)
+end
+```
+
+<!-- shot() --> 
+
+The choice between extracting a local variable and inserting a `tap` ultimately
+boils down to taste and what most makes sense to your team. If I were working
+with a team that was less familiar with Ruby idioms, I'd probably lean more
+towards the local variable version. On the other hand, with a team of
+experienced Rubyists, I'd be more likely to use and recommend the `tap` version.
+My strongest recommendation is that you achieve consensus with your team on
+which style they prefer, and use it consistently.
+
+```ruby
+def update_invoice_company(email, new_company)
+  Account.find_by_email(email)
+         .finalized_invoices
+         .most_recent
+         .tap(&method(:log_invoice_update))
+         .update(company_name: new_company)
+end
+
+def update_invoice_company(email, new_company)
+  invoice = Account.find_by_email(email)
+                   .finalized_invoices
+                   .most_recent
+  $logger.info "Updating #{invoice.number}"
+  invoice.update(company_name: new_company)
+end
+```
+
+See ya 'round!
