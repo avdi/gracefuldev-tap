@@ -1,4 +1,4 @@
-<!-- shot() --> 
+<!-- shot(1) --> 
 
 So we've got this business that bills customers either monthly or annually. And
 every now and then, someone from a corporate account emails us to ask us to
@@ -7,7 +7,7 @@ regulations, their invoices need to show their company name. And because
 invoices have all their own data columns, updating their profile doesn't
 automatically update their past invoices.
   
-<!-- shot() --> 
+<!-- shot(2) --> 
 
 So we've got this method that performs the update. A series of chained method
 calls locates the account by email address, and then finds their most recent
@@ -22,7 +22,7 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() --> 
+<!-- shot(3) --> 
 
 Calling the method looks like this:
 
@@ -34,7 +34,7 @@ Now, let's say we want to add some logging to this method. Specifically, we want
 to log the fact that we're updating an invoice, and we want to show *invoice
 number*.
 
-<!-- shot() --> 
+<!-- shot(4) --> 
 
 In order to do this, we need to break the chain of method calls. We assign the
 found invoice to a local variable, log that we're updating it, and then perform
@@ -56,12 +56,12 @@ it. It's straightforward and comprehensible.
 That said, it is a pretty radical re-shaping of the original code just to add
 some logging.
 
-<!-- shot() --> 
+<!-- shot(5) --> 
 
 And if we later decide to back that change out by deleting the logging and
 re-attaching the original chain...
 
-<!-- shot() --> 
+<!-- shot(6) --> 
 
 ...we run the risk of accidentally leaving a dangling local variable. This
 variable is both no longer used *and* inaccurate, since it is now being assigned
@@ -76,7 +76,7 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() --> 
+<!-- shot(7) --> 
 
 So it's not that this code is *bad* per se, but it's high-friction for a change
 that isn't supposed to modify any of the original code semantics.
@@ -91,7 +91,7 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() -->
+<!-- shot(8) -->
 
 Fundamentally what we're trying to do here is inject some logging in the middle
 of a chain of method calls. It might be lower friction if we could write this
@@ -107,7 +107,7 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() --> 
+<!-- shot(9) --> 
 
 This chain of methods is kind of like a pipeline, and we remember that Ruby has
 a method for inserting extra code into pipelines. It's called `yield_self`, and
@@ -121,11 +121,11 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() --> 
+<!-- shot(10) --> 
 
 While `yield_self` is the canonical name of this method, we usually prefer its pithier alias, `then`.
 
-<!-- shot() --> 
+<!-- shot(11) --> 
 
 This almost works. It does perform the logging, but then it fails with a missing
 method.
@@ -152,7 +152,7 @@ Why the error? The problem is that the `then` method returns the result of the
 block. Which in this case is the result of the logging call, which happens to be
 the boolean value `true`.
 
-<!-- shot() --> 
+<!-- shot(12) --> 
 
 In order to make this work again, we have to remember to return the `invoice`
 object from the block.  
@@ -169,7 +169,7 @@ end
 This seems like an error-prone approach. Fortunately, Ruby has an alternative
 better suited to this situation: 
 
-<!-- shot() --> 
+<!-- shot(13) --> 
 
 the `tap` method.
 
@@ -178,7 +178,7 @@ unlike `then` aka `yield_self`, `tap` always returns the *receiver object*
 rather than the result of the block. It yields the receiver object to the
 block and also returns the receiver object after executing the block. 
 
-<!-- shot() -->
+<!-- shot(14) -->
 
 So we can get rid of the explicit block return value.
 
@@ -195,7 +195,7 @@ end
 ```
 
 In effect, the code in the block is executed as a pure side-effect; it has no
-effect on the chain of method calls.
+impact on the chain of method calls.
 
 `tap` might seem like an odd name. It comes from the fact that we often call
 multiple chained message sends like this a *pipeline*. If we have an actual
@@ -207,7 +207,7 @@ Compared to our original local variable version, using `tap` has the advantage
 that adding a single side effect to our pipeline is a single contiguous code
 addition.
 
-<!-- shot() --> 
+<!-- shot(15) --> 
 
 Removing that code is a single contiguous deletion.
 
@@ -220,11 +220,11 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() --> 
+<!-- shot(16) --> 
 
 Semantically, this feels like a more one-to-one relationship of code to action.
 
-<!-- shot() --> 
+<!-- shot(17) --> 
 
 It also lends itself well to factoring. Let's say we decide to capture our
 logging code in a helper method which we can re-use from more than one call site.
@@ -235,7 +235,7 @@ def log_invoice_update(invoice)
 end
 ```
 
-<!-- shot() -->
+<!-- shot(18) -->
 
 Injecting this logging code into our pipeline now means using tap with the
 helper method, as an object, converted to a block using the `&` (to-proc) operator.
@@ -250,7 +250,7 @@ def update_invoice_company(email, new_company)
 end
 ```
 
-<!-- shot() --> 
+<!-- shot(19) --> 
 
 The choice between extracting a local variable and inserting a `tap` ultimately
 boils down to taste and what most makes sense to your team. If I were working
